@@ -32,5 +32,10 @@
 	"replace": {
 		"news_recurring": "self.version",
 		"typo3-ter/news-recurring": "self.version"
+	},
+	"extra": {
+		"branch-alias": {
+			"dev-master": "1.0.x-dev"
+		}
 	}
 }
