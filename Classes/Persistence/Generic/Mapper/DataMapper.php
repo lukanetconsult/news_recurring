@@ -9,19 +9,56 @@ namespace GeorgRinger\NewsRecurring\Persistence\Generic\Mapper;
  * LICENSE.txt file that was distributed with this source code.
  */
 use GeorgRinger\NewsRecurring\Domain\Model\News;
+use ReflectionClass;
+use Throwable;
 
 /**
  * Class DataMapper
  */
 class DataMapper extends \TYPO3\CMS\Extbase\Persistence\Generic\Mapper\DataMapper
 {
+    /**
+     * Hash map with recurring class check result
+     * @var bool[]
+     */
+    private static $isRecurringClassCache = [];
 
     /**
      * Fields which needs to be from the original record
      *
      * @var array
      */
-    protected $overlaidFields = ['type', 'datetime', 'recurring_parent'];
+    protected $overlaidFields = ['uid', 'type', 'datetime', 'recurring_parent'];
+
+    private function extendsRecurringNews(string $class): bool
+    {
+        try {
+            if ($class === News::class) {
+                return true;
+            }
+
+            while (false !== ($parent = (new ReflectionClass($class))->getParentClass())) {
+                $class = $parent->getName();
+
+                if ($class === News::class) {
+                    return true;
+                }
+            };
+
+            return false;
+        } catch (Throwable $error) {
+            return false;
+        }
+    }
+
+    private function isRecurringNews(string $class): bool
+    {
+        if (!isset(self::$isRecurringClassCache[$class])) {
+            self::$isRecurringClassCache[$class] = $this->extendsRecurringNews($class);
+        }
+
+        return self::$isRecurringClassCache[$class];
+    }
 
     /**
      * Maps a single row on an object of the given class
@@ -32,7 +69,8 @@ class DataMapper extends \TYPO3\CMS\Extbase\Persistence\Generic\Mapper\DataMappe
      */
     protected function mapSingleRow($className, array $row)
     {
-        if ($className === News::class) {
+
+        if ($this->isRecurringNews($className)) {
             $parentRow = $this->getParentRow($row['recurring_parent']);
 
             $object = $this->createEmptyObject($className);
